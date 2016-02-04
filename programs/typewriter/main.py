@@ -22,6 +22,7 @@ from world import World
 loadPrcFileData('', 'model-path $MAIN_DIR/assets/models')
 loadPrcFileData('', 'model-path $MAIN_DIR/assets/textures')
 loadPrcFileData('', 'model-path $MAIN_DIR/assets/fonts')
+loadPrcFileData('', 'model-path $MAIN_DIR/assets/sounds')
 
 global globalClock
 

@@ -41,6 +41,8 @@ class World(object):
         plnp.setHpr(0, 60, 0)
         self.base.render.setLight(plnp)
 
+        self.sounds = {}
+
     def start(self, skipIntro):
         self.skipIntro = skipIntro
 
@@ -59,8 +61,17 @@ class World(object):
         # the desk
         self.deskNP = self.base.loader.loadModel('desk')
 
+        # skybox
         skyb = skybox.NetmapSkybox(self.base, 'iceRiver', '', '.jpg')
         self.sky = skyb.create(self.base.cam)
+
+        # sounds
+        self.sounds['bell'] = self.base.loader.loadSfx('bell.wav')
+        self.sounds['advance'] = self.base.loader.loadSfx('advance.wav')
+        self.sounds['pullback'] = self.base.loader.loadSfx('pullback.wav')
+        self.sounds['scroll'] = self.base.loader.loadSfx('scroll.wav')
+        self.sounds['type1'] = self.base.loader.loadSfx('type1.wav')
+        self.sounds['type2'] = self.base.loader.loadSfx('type2.wav')
 
         if not self.skipIntro:
             self.sky.setAttrib(TransparencyAttrib.make(TransparencyAttrib.M_alpha))
@@ -151,7 +162,7 @@ class World(object):
         self.base.mouseInterfaceNode.setMat(mat)
         self.base.enableMouse()
 
-        self.typist = Typist(self.base, self.typewriterNP)
+        self.typist = Typist(self.base, self.typewriterNP, self.sounds)
         self.typist.start()
 
     def placeItems(self):

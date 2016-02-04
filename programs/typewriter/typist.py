@@ -1,3 +1,5 @@
+import random
+
 from panda3d.core import Vec3, Point3, CompassEffect, Texture, PNMImage, TextureStage, PNMPainter, PNMBrush, \
     PNMTextMaker
 
@@ -14,8 +16,10 @@ class Typist(object):
         }
     }
 
-    def __init__(self, base, typewriterNP):
+    def __init__(self, base, typewriterNP, sounds):
         self.base = base
+        self.sounds = sounds
+
         self.typewriterNP = typewriterNP
         self.rollerNP = typewriterNP.find("**/roller")
         assert self.rollerNP
@@ -149,12 +153,18 @@ class Typist(object):
         self.paperX = 0
         self.paperY += self.paperLineHeight()
 
+        self.sounds['scroll'].play()
+
         self.rollPaper()
-        self.moveCarriage()
+        self.resetCarriage()
 
     def bksp(self):
         if self.paperX > 0:
             self.adjustCarriage(-1)
+
+    def resetCarriage(self):
+        self.paperX = 0
+        self.sounds['pullback'].play()
 
     def moveCarriage(self):
         x = (0.5 - self.paperX) * 0.5 - 0.15
@@ -199,12 +209,16 @@ class Typist(object):
             #self.paperX += self.paperCharWidth(g.getWidth())
             self.paperX += self.paperCharWidth()
 
+            self.sounds[random.choice(['type1', 'type2'])].play()
+
         else:
             self.paperX += self.paperCharWidth()
+            self.sounds['advance'].play()
 
 
         if self.paperX >= 1:
-            self.scroll()
+            self.sounds['bell'].play()
+            self.paperX = 1
 
         self.moveCarriage()
 
