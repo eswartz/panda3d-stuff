@@ -1,0 +1,17 @@
+import sys
+# add the working directory to the path so local files and modules can be found
+sys.path.insert(0,'') 
+ 
+class RocketSample(p3d):
+    require('rocket','panda3d') # include some other packages
+ 
+    config( 
+        version="0.0.1", 
+        display_name="Rocket Sample") 
+ 
+    module('core.*') # include the python package core, and its submodules
+    dir('assets',newDir='assets') # include a folder called data
+    mainModule('main') # include and set the main module that runs when the p3d is run
+    file("config.prc")
+    #file('events.txt') # include a text file
+

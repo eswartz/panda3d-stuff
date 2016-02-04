@@ -1,0 +1,76 @@
+<rml>
+	<head>
+		<title>Main Menu</title>
+		<link type="text/template" href="window.rml" />
+		<style>
+			body
+			{
+				width: 400px;
+				height: 225px;
+
+				margin: auto;
+	
+				background-color: #44f;
+			}
+						
+			
+			div#title_bar 
+			{
+				color: #fff;
+				background-color: #22f;
+				
+				z-index: 1;
+				
+				//position: absolute;
+				//top: 0px;
+				//left: 0px;
+				
+				text-align: center;
+			}
+						
+			div#title_bar span
+			{
+				//padding-left: 85px;
+				//padding-right: 25px;
+				padding-top: 17px;
+				padding-bottom: 48px;
+			
+				font-size: 32;
+				font-weight: bold;
+			
+				outline-font-effect: outline;
+				outline-width: 1px;
+				outline-color: black;
+			
+				//background-decorator: tiled-horizontal;
+				//background-left-image: invader.tga 147px 0px 229px 85px;
+				//background-center-image: invader.tga stretch 229px 0px 230px 85px;
+				//background-right-image: invader.tga 231px 0px 246px 85px;
+				
+			}
+			
+			div#title_bar div#icon
+			{
+				icon-image-s: 179px 230px;
+				icon-image-t: 152px 191px;
+				
+				
+			}
+		</style>
+	</head>
+	<body template="window">
+		<!--
+		<button onclick="LoadMenu('high_score')">High Scores</button><br />
+		<button onclick="LoadMenu('options')">Options</button><br />
+		<button onclick="LoadMenu('help')">Help</button><br />
+		-->
+		<div id="title_bar_content">
+			<label>Where experiments come to life!</label>
+			<br />
+		</div>
+		<div id="window">
+			<button onclick="exit()">Exit</button>
+	                <input type="text" />
+		</div>
+	</body>
+</rml>
