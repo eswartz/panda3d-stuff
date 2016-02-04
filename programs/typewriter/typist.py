@@ -3,8 +3,11 @@ import random
 from panda3d.core import Vec3, Point3, CompassEffect, Texture, PNMImage, TextureStage, PNMPainter, PNMBrush, \
     PNMTextMaker
 
+from direct.interval.LerpInterval import LerpFunc, LerpPosInterval
+from lib.scheduler import Scheduler
 from lib.utils import fonts
 
+global globalClock
 
 class Typist(object):
 
@@ -19,6 +22,7 @@ class Typist(object):
     def __init__(self, base, typewriterNP, sounds):
         self.base = base
         self.sounds = sounds
+        self.typeIndex = 0
 
         self.typewriterNP = typewriterNP
         self.rollerNP = typewriterNP.find("**/roller")
@@ -49,6 +53,13 @@ class Typist(object):
         self.texImage = None
         self.setupTexture()
 
+        self.scheduler = Scheduler()
+        task = self.base.taskMgr.add(self.tick, 'timerTask')
+        task.setDelay(0.01)
+
+    def tick(self, task):
+        self.scheduler.tick(globalClock.getRealTime())
+        return task.cont
 
     def createRollerBase(self):
         """ The paper moves such that it is tangent to the roller.
@@ -114,32 +125,27 @@ class Typist(object):
 
         # reset
         self.paperX = self.paperY = 0.0
-        self.rollPaper()
+        self.schedRollPaper()
         self.moveCarriage()
 
     def hookKeyboard(self):
         """
         Hook events so we can respond to keypresses.
         """
-        def userCharacter(keyname):
-            # filter
-            if ord(keyname) >= 32 and ord(keyname) != 127:
-                self.typeCharacter(keyname)
-
         self.base.buttonThrowers[0].node().setKeystrokeEvent('keystroke')
-        self.base.accept('keystroke', userCharacter)
-        self.base.accept('enter', self.scroll)
-        self.base.accept('backspace', self.bksp)
+        self.base.accept('keystroke', self.schedTypeCharacter)
+        self.base.accept('enter', self.schedScroll)
+        self.base.accept('backspace', self.schedBackspace)
 
-        self.base.accept('arrow_up', lambda: self.adjustPaper(3))
-        self.base.accept('arrow_up-repeat', lambda: self.adjustPaper(1))
-        self.base.accept('arrow_down', lambda:self.adjustPaper(-3))
-        self.base.accept('arrow_down-repeat', lambda:self.adjustPaper(-1))
+        self.base.accept('arrow_up', lambda: self.schedAdjustPaper(-3))
+        self.base.accept('arrow_up-repeat', lambda: self.schedAdjustPaper(-1))
+        self.base.accept('arrow_down', lambda:self.schedAdjustPaper(3))
+        self.base.accept('arrow_down-repeat', lambda:self.schedAdjustPaper(1))
 
-        self.base.accept('arrow_left', lambda: self.adjustCarriage(-1))
-        self.base.accept('arrow_left-repeat', lambda: self.adjustCarriage(-1))
-        self.base.accept('arrow_right', lambda:self.adjustCarriage(1))
-        self.base.accept('arrow_right-repeat', lambda:self.adjustCarriage(1))
+        self.base.accept('arrow_left', lambda: self.schedAdjustCarriage(-1))
+        self.base.accept('arrow_left-repeat', lambda: self.schedAdjustCarriage(-1))
+        self.base.accept('arrow_right', lambda:self.schedAdjustCarriage(1))
+        self.base.accept('arrow_right-repeat', lambda:self.schedAdjustCarriage(1))
 
     def paperCharWidth(self, pixels=None):
         if not pixels:
@@ -149,50 +155,95 @@ class Typist(object):
     def paperLineHeight(self):
         return float(self.fontCharSize[1]) / self.tex.getYSize()
 
-    def scroll(self):
-        self.paperX = 0
+    def schedScroll(self):
         self.paperY += self.paperLineHeight()
 
         self.sounds['scroll'].play()
 
-        self.rollPaper()
-        self.resetCarriage()
+        self.schedRollPaper()
+        self.schedResetCarriage()
 
-    def bksp(self):
-        if self.paperX > 0:
-            self.adjustCarriage(-1)
+    def schedBackspace(self):
+        if self.scheduler.isQueueEmpty():
+            def doit():
+                if self.paperX > 0:
+                    self.schedAdjustCarriage(-1)
 
-    def resetCarriage(self):
-        self.paperX = 0
-        self.sounds['pullback'].play()
+            self.scheduler.schedule(0.01, doit)
 
-    def moveCarriage(self):
-        x = (0.5 - self.paperX) * 0.5 - 0.15
+    def schedResetCarriage(self):
+        if self.paperX > 0.1:
+            self.sounds['pullback'].play()
+
+        here = self.calcCarriage(self.paperX)
+        there = self.calcCarriage(0)
+
+        posInterval = LerpPosInterval(
+                self.carriageNP, self.paperX,
+                there,
+                startPos = here,
+                blendType='easeIn')
+
+        posInterval.setDoneEvent('carriageReset')
+
+        def isReset():
+            self.paperX = 0
+
+        self.base.acceptOnce('carriageReset', isReset)
+
+        posInterval.start()
+
+    def calcCarriage(self, paperX):
+        x = (0.5 - paperX) * 0.5 - 0.15
 
         bb = self.carriageBounds
-        self.carriageNP.setPos(self.baseCarriagePos + Point3(x * (bb[1].x-bb[0].x), 0, 0))
+        return self.baseCarriagePos + Point3(x * (bb[1].x-bb[0].x), 0, 0)
 
-    def adjustCarriage(self, by):
-        self.paperX = max(0.0, min(1.0, self.paperX + by * self.paperCharWidth()))
-        self.moveCarriage()
+    def moveCarriage(self):
+        pos = self.calcCarriage(self.paperX)
+        self.carriageNP.setPos(pos)
 
 
-    def adjustPaper(self, by):
-        self.paperY = min(1.0, max(0.0, self.paperY + self.paperLineHeight() * by))
-        self.rollPaper()
+    def schedMoveCarriage(self):
+        self.scheduler.schedule(0.1, self.moveCarriage)
 
-    def rollPaper(self):
+    def schedAdjustCarriage(self, by):
+        def doit():
+            self.paperX = max(0.0, min(1.0, self.paperX + by * self.paperCharWidth()))
+            self.moveCarriage()
+
+        self.scheduler.schedule(0.1, doit)
+
+
+    def schedAdjustPaper(self, by):
+        def doit():
+            self.paperY = min(1.0, max(0.0, self.paperY + self.paperLineHeight() * by))
+            self.schedRollPaper()
+
+        self.scheduler.schedule(0.1, doit)
+
+    def schedRollPaper(self):
         """
         Position the paper such that @percent of it is rolled over self.rollerNP.
         :param percent:
         :return:
         """
-        # center over roller, peek out a little
-        z = self.paperY * 0.8 - 0.5 + 0.175
 
-        bb = self.target.getTightBounds()
+        def doit():
+            # center over roller, peek out a little
+            z = self.paperY * 0.8 - 0.5 + 0.175
 
-        self.target.setPos(0, 0, z * (bb[1].z-bb[0].z))
+            bb = self.target.getTightBounds()
+
+            self.target.setPos(0, 0, z * (bb[1].z-bb[0].z))
+
+        self.scheduler.schedule(0.1, doit)
+
+    def schedTypeCharacter(self, keyname):
+        # filter
+        if ord(keyname) >= 32 and ord(keyname) != 127:
+            if self.scheduler.isQueueEmpty():
+                self.scheduler.schedule(0.001, lambda: self.typeCharacter(keyname))
 
     def typeCharacter(self, ch):
 
@@ -209,7 +260,10 @@ class Typist(object):
             #self.paperX += self.paperCharWidth(g.getWidth())
             self.paperX += self.paperCharWidth()
 
-            self.sounds[random.choice(['type1', 'type2'])].play()
+            # alternate typing sound
+            #self.typeIndex = (self.typeIndex+1) % 3
+            self.typeIndex = random.randint(0, 2)
+            self.sounds['type' + str(self.typeIndex+1)].play()
 
         else:
             self.paperX += self.paperCharWidth()
@@ -220,6 +274,6 @@ class Typist(object):
             self.sounds['bell'].play()
             self.paperX = 1
 
-        self.moveCarriage()
+        self.schedMoveCarriage()
 
         self.tex.load(self.texImage)

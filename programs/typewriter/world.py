@@ -72,6 +72,7 @@ class World(object):
         self.sounds['scroll'] = self.base.loader.loadSfx('scroll.wav')
         self.sounds['type1'] = self.base.loader.loadSfx('type1.wav')
         self.sounds['type2'] = self.base.loader.loadSfx('type2.wav')
+        self.sounds['type3'] = self.base.loader.loadSfx('type3.wav')
 
         if not self.skipIntro:
             self.sky.setAttrib(TransparencyAttrib.make(TransparencyAttrib.M_alpha))
