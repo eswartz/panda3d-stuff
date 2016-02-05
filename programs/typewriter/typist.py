@@ -136,7 +136,6 @@ class Typist(object):
         """
         self.base.buttonThrowers[0].node().setKeystrokeEvent('keystroke')
         self.base.accept('keystroke', self.schedTypeCharacter)
-        self.base.accept('enter', self.schedScroll)
         self.base.accept('backspace', self.schedBackspace)
 
         self.base.accept('arrow_up', lambda: self.schedAdjustPaper(-1))
@@ -283,7 +282,10 @@ class Typist(object):
 
     def schedTypeCharacter(self, keyname):
         # filter for visibility
-        if ord(keyname) >= 32 and ord(keyname) != 127:
+        if ord(keyname) == 13:
+            self.schedScroll()
+
+        elif ord(keyname) >= 32 and ord(keyname) != 127:
             if self.scheduler.isQueueEmpty():
                 curX, curY = self.paperX, self.paperY
                 self.typeCharacter(keyname, curX, curY)
