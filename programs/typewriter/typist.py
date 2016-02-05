@@ -1,9 +1,14 @@
+"""
+Support "typing" onto an object.
+
+This method creates a Texture and PNMImage, makes that texture a second
+TextureStage on the original object, and copies changes when a character is struck.
+"""
 import random
 
-from panda3d.core import Vec3, Point3, CompassEffect, Texture, PNMImage, TextureStage, PNMPainter, PNMBrush, \
-    PNMTextMaker
+from panda3d.core import Vec3, Point3, Texture, PNMImage, TextureStage, PNMTextMaker
 
-from direct.interval.LerpInterval import LerpFunc, LerpPosInterval
+from direct.interval.LerpInterval import LerpPosInterval
 from scheduler import Scheduler
 from utils import fonts
 
@@ -76,11 +81,13 @@ class Typist(object):
         center = Vec3((bb[0].x+bb[1].x)/2, (bb[0].y+bb[1].y)/2-rad*0.3, (bb[0].z+bb[1].z)/2)
         self.paperRollerBase.setPos(center)
 
-        # don't let the typewriter scale the target in a funny way
-        #self.compass = CompassEffect.make(self.base.render, CompassEffect.P_scale)
-        #self.paperRollerBase.setEffect(self.compass)
-
     def setupTexture(self):
+        """
+        This is the overlay/decal/etc. which contains the typed characters.
+
+        The texture size and the font size are currently tied together.
+        :return:
+        """
         self.texImage = PNMImage(1024, 1024)
         self.texImage.addAlpha()
         self.texImage.fillVal(255)
@@ -95,6 +102,37 @@ class Typist(object):
 
         self.tex.load(self.texImage)
 
+    def drawCharacter(self, ch, px, py):
+        """
+        Draw a character onto the texture
+        :param ch:
+        :param px: paperX
+        :param py: paperY
+        :return: the paper-relative size of the character
+        """
+
+        h = self.fontCharSize[1]
+
+        if ch != ' ':
+            #g = self.pnmFont.getGlyph(ord(ch))
+
+            # position -> pixel, applying margins
+            x = int(self.tex.getXSize() * (px * 0.8 + 0.1))
+            y = int(self.tex.getYSize() * (py * 0.8 + 0.1))
+
+            #print ch,"to",x,y,"w=",g.getWidth()
+            self.pnmFont.generateInto(ch, self.texImage, x, y)
+            self.tex.load(self.texImage)
+
+            # toggle for a typewriter that uses non-proportional spacing
+            #w = self.paperCharWidth(g.getWidth())
+            w = self.paperCharWidth()
+
+        else:
+
+            w = self.paperCharWidth()
+
+        return w, h
 
     def start(self):
         self.target = None
@@ -292,28 +330,20 @@ class Typist(object):
 
     def typeCharacter(self, ch, curX, curY):
 
-        # position -> pixel, applying margins
-        x = int(self.tex.getXSize() * (curX * 0.8 + 0.1))
-        y = int(self.tex.getYSize() * (curY * 0.8 + 0.1))
-
         newX = curX
 
+        w, h = self.drawCharacter(ch, curX, curY)
+
+        newX += w
+
+
         if ch != ' ':
-            #g = self.pnmFont.getGlyph(ord(ch))
-
-            #print ch,"to",x,y,"w=",g.getWidth()
-            self.pnmFont.generateInto(ch, self.texImage, x, y)
-
-            #self.paperX += self.paperCharWidth(g.getWidth())
-            newX += self.paperCharWidth()
-
             # alternate typing sound
             #self.typeIndex = (self.typeIndex+1) % 3
             self.typeIndex = random.randint(0, 2)
             self.sounds['type' + str(self.typeIndex+1)].play()
 
         else:
-            newX += self.paperCharWidth()
             self.sounds['advance'].play()
 
 
@@ -321,7 +351,6 @@ class Typist(object):
             self.sounds['bell'].play()
             newX = 1
 
-        self.tex.load(self.texImage)
 
         self.schedMoveCarriage(self.paperX, newX)
 
