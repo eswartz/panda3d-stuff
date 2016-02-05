@@ -104,11 +104,11 @@ class World(object):
         self.typewriterNP.setScale(5)
         self.typewriterNP.setPos(0, -1000, -2.5)     # hide until shown
 
-        self.base.camera.setPos(0, -25, 0)
-        #self.cameraTarget = Point3(0, -19.5, 5)
-        self.cameraTarget = Point3(0, -9.5, 2.5)
+        self.base.camera.setPos(0, -25, 5)
+        self.cameraTarget = Point3(0, -9.5, 7.5)
+        #self.cameraTarget = Point3(0, -25, 2.5)
         self.cameraHprTarget = Point3(0, -19.5, 0)
-        self.typewriterTarget = Point3(0, -5, -2.5)
+        self.typewriterTarget = Point3(0, -2.5, 2.666)
         self.typewriterStart = Point3(0, -5, 10)
 
         if not self.skipIntro:
