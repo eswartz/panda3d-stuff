@@ -171,12 +171,14 @@ class Typist(object):
             self.scheduler.schedule(0.01, doit)
 
 
-    def createMoveCarriageInterval(self, newX):
-        here = self.calcCarriage(self.paperX)
+    def createMoveCarriageInterval(self, newX, curX=None):
+        if curX is None:
+            curX = self.paperX
+        here = self.calcCarriage(curX)
         there = self.calcCarriage(newX)
 
         posInterval = LerpPosInterval(
-                self.carriageNP, abs(newX - self.paperX),
+                self.carriageNP, abs(newX - curX),
                 there,
                 startPos = here,
                 blendType='easeIn')
@@ -214,16 +216,16 @@ class Typist(object):
         self.carriageNP.setPos(pos)
 
 
-    def schedMoveCarriage(self, newX):
+    def schedMoveCarriage(self, curX, newX):
         if self.scheduler.isQueueEmpty():
             #self.scheduler.schedule(0.1, self.moveCarriage)
-            invl = self.createMoveCarriageInterval(newX)
+            invl = self.createMoveCarriageInterval(newX, curX=curX)
             invl.start()
 
-    def schedAdjustCarriage(self, by):
+    def schedAdjustCarriage(self, bx):
         if self.scheduler.isQueueEmpty():
             def doit():
-                self.paperX = max(0.0, min(1.0, self.paperX + by * self.paperCharWidth()))
+                self.paperX = max(0.0, min(1.0, self.paperX + bx * self.paperCharWidth()))
                 self.moveCarriage()
 
             self.scheduler.schedule(0.1, doit)
@@ -284,11 +286,7 @@ class Typist(object):
         if ord(keyname) >= 32 and ord(keyname) != 127:
             if self.scheduler.isQueueEmpty():
                 curX, curY = self.paperX, self.paperY
-
-                def type():
-                    self.typeCharacter(keyname, curX, curY)
-
-                self.scheduler.schedule(0, type)
+                self.typeCharacter(keyname, curX, curY)
 
     def typeCharacter(self, ch, curX, curY):
 
@@ -323,5 +321,8 @@ class Typist(object):
 
         self.tex.load(self.texImage)
 
-        self.schedMoveCarriage(newX)
+        self.schedMoveCarriage(self.paperX, newX)
+
+        # move first, to avoid overtype
+        self.paperX = newX
 
