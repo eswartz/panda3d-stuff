@@ -6,7 +6,7 @@ TextureStage on the original object, and copies changes when a character is stru
 """
 import random
 
-from panda3d.core import Vec3, Point3, Texture, PNMImage, TextureStage, PNMTextMaker
+from panda3d.core import Vec3, Point3, Texture, PNMImage, TextureStage, PNMTextMaker, Vec4
 
 from direct.interval.LerpInterval import LerpPosInterval
 from scheduler import Scheduler
@@ -102,6 +102,13 @@ class Typist(object):
 
         self.tex.load(self.texImage)
 
+        # ensure we can quickly update subimages
+        self.tex.setKeepRamImage(True)
+
+        # temp for drawing chars
+        self.chImage = PNMImage(*self.fontCharSize)
+
+
     def drawCharacter(self, ch, px, py):
         """
         Draw a character onto the texture
@@ -114,15 +121,38 @@ class Typist(object):
         h = self.fontCharSize[1]
 
         if ch != ' ':
-            #g = self.pnmFont.getGlyph(ord(ch))
 
             # position -> pixel, applying margins
             x = int(self.tex.getXSize() * (px * 0.8 + 0.1))
             y = int(self.tex.getYSize() * (py * 0.8 + 0.1))
 
-            #print ch,"to",x,y,"w=",g.getWidth()
+            # always draw onto the paper, to capture
+            # incremental character overstrikes
             self.pnmFont.generateInto(ch, self.texImage, x, y)
-            self.tex.load(self.texImage)
+
+            if False:
+                #print ch,"to",x,y,"w=",g.getWidth()
+                self.tex.load(self.texImage)
+
+            else:
+                # copy an area (presumably) encompassing the character
+                g = self.pnmFont.getGlyph(ord(ch))
+                cx, cy = self.fontCharSize
+
+                # a glyph is minimally sized and "moves around" in its text box
+                # (think ' vs. ,), so it has been drawn somewhere relative to
+                # the 'x' and 'y' we wanted.
+                x += g.getLeft()
+                y -= g.getTop()
+
+                self.chImage.copySubImage(
+                        self.texImage,
+                        0, 0,  # from
+                        x, y,  # to
+                        cx,  cy  # size
+                )
+
+                self.tex.loadSubImage(self.chImage, x, y)
 
             # toggle for a typewriter that uses non-proportional spacing
             #w = self.paperCharWidth(g.getWidth())
