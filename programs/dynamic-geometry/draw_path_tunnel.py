@@ -22,7 +22,7 @@ from panda3d.core import TextNode, GeomNode, LVecBase4i, GeomVertexFormat, Geom,
     CollisionFloorMesh, GeomVertexReader, Point3, CollisionHandlerFloor
 import sys
 
-import lib.fpscontroller as fpscontroller
+import fpscontroller
 
 
 class MyApp(ShowBase):

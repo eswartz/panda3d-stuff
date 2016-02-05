@@ -4,8 +4,8 @@ from panda3d.core import Vec3, Point3, CompassEffect, Texture, PNMImage, Texture
     PNMTextMaker
 
 from direct.interval.LerpInterval import LerpFunc, LerpPosInterval
-from lib.scheduler import Scheduler
-from lib.utils import fonts
+from scheduler import Scheduler
+from utils import fonts
 
 global globalClock
 

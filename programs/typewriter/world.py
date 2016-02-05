@@ -9,7 +9,7 @@ from panda3d.core import Point3, Mat4, TransparencyAttrib  # @UnusedImport
 
 from direct.interval.LerpInterval import LerpHprInterval, LerpPosInterval, LerpFunc
 from direct.interval.MetaInterval import Parallel, Sequence
-from lib import skybox
+import skybox
 
 from typist import Typist
 

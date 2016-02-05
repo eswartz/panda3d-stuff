@@ -4,19 +4,11 @@ Allow simulating a typewriter using texture projection
 Ed Swartz, Feb 2016
 '''
 import sys
-import random
+
+from panda3d.core import loadPrcFileData, Vec4, TextNode  # @UnusedImport
 
 from direct.gui.OnscreenText import OnscreenText
-from direct.interval.MetaInterval import Parallel, Sequence
-from panda3d.core import loadPrcFile, loadPrcFileData, Point3,Vec4, Mat4, LoaderOptions, TextNode, \
-    TransparencyAttrib, Vec3  # @UnusedImport
-from panda3d.core import DirectionalLight, AmbientLight, PointLight
-from panda3d.core import Texture, PNMImage
-from panda3d.core import PandaSystem
-from direct.interval.LerpInterval import LerpHprInterval, LerpPosInterval, LerpFunc
 from direct.showbase.ShowBase import ShowBase
-
-from lib import skybox
 from world import World
 
 loadPrcFileData('', 'model-path $MAIN_DIR/assets/models')
