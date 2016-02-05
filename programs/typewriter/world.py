@@ -49,7 +49,7 @@ class World(object):
         self.base.skybox = None
         self.typewriterNP = None
         self.deskNP = None
-        self.base.taskMgr.doMethodLater(0.1, self.loadup, 'loadup')
+        self.base.taskMgr.doMethodLater(0.2, self.loadup, 'loadup')
 
     def loadup(self, task):
         # get in front
@@ -92,7 +92,7 @@ class World(object):
         else:
             self.base.messenger.send('createWorld')
 
-    def createWorld(self):
+    def createWorld(self, task=None):
         self.sky.clearAttrib(TransparencyAttrib)
 
         self.deskNP.reparentTo(self.base.render)
@@ -100,9 +100,9 @@ class World(object):
         self.deskNP.setPos(0, -5, -6.5)
 
         self.typewriterNP.reparentTo(self.base.render)
+
         self.typewriterNP.setHpr(0, 0, 0)
         self.typewriterNP.setScale(5)
-        self.typewriterNP.setPos(0, -1000, -2.5)     # hide until shown
 
         self.base.camera.setPos(0, -25, 5)
         self.cameraTarget = Point3(0, -9.5, 7.5)

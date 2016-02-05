@@ -35,9 +35,10 @@ class MyApp(ShowBase):
         self.acceptOnce('createWorld', self.createWorld)
         self.world.start('--gogogo' in sys.argv)
 
-    def createWorld(self):
+    def createWorld(self, task=None):
         self.loadingMessage.removeNode()
-        self.world.createWorld()
+
+        self.doMethodLater(0.1, self.world.createWorld, 'create world')
 
     def showLoadingMessage(self):
 
