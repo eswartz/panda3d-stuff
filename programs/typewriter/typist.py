@@ -8,6 +8,20 @@ import random
 
 from panda3d.core import Vec3, Point3, Texture, PNMImage, TextureStage, PNMTextMaker, Vec4
 
+from panda3d.core import Geom
+from panda3d.core import GeomNode
+from panda3d.core import GeomPoints
+from panda3d.core import GeomVertexArrayFormat
+from panda3d.core import GeomVertexData
+from panda3d.core import GeomVertexFormat
+from panda3d.core import GeomVertexWriter
+from panda3d.core import RenderAttrib
+from panda3d.core import Shader
+from panda3d.core import TexGenAttrib
+from panda3d.core import TextureStage
+from panda3d.core import Vec3, NodePath, Texture, Vec4
+from panda3d.core import loadPrcFileData
+
 from direct.interval.LerpInterval import LerpPosInterval
 from scheduler import Scheduler
 from utils import fonts
@@ -24,19 +38,21 @@ class Typist(object):
         }
     }
 
-    def __init__(self, base, typewriterNP, sounds):
+    def __init__(self, base, typewriterNP, underDeskClip, sounds):
         self.base = base
         self.sounds = sounds
+        self.underDeskClip = underDeskClip
         self.typeIndex = 0
 
         self.typewriterNP = typewriterNP
+        self.rollerAssemblyNP = typewriterNP.find("**/roller assembly")
+        assert self.rollerAssemblyNP
         self.rollerNP = typewriterNP.find("**/roller")
         assert self.rollerNP
         self.carriageNP = typewriterNP.find("**/carriage")
         assert self.carriageNP
         self.baseCarriagePos = self.carriageNP.getPos()
         self.carriageBounds = self.carriageNP.getTightBounds()
-
 
         self.font = base.loader.loadFont('Harting.ttf', pointSize=32)
         self.pnmFont = PNMTextMaker(self.font)
@@ -46,6 +62,8 @@ class Typist(object):
         self.pixelsPerLine = int(round(self.pnmFont.getLineHeight()))
 
         self.target = None
+        """ panda3d.core.NodePath """
+        self.targetRoot = None
         """ panda3d.core.NodePath """
         self.paperY = 0.0
         """ range from 0 to 1 """
@@ -65,21 +83,6 @@ class Typist(object):
     def tick(self, task):
         self.scheduler.tick(globalClock.getRealTime())
         return task.cont
-
-    def createRollerBase(self):
-        """ The paper moves such that it is tangent to the roller.
-
-        This nodepath keeps a coordinate space relative to that, so that
-        the paper can be positioned from (0,0,0) to (0,0,1) to "roll" it
-        along the roller.
-        """
-        self.paperRollerBase = self.rollerNP.attachNewNode('rollerBase')
-        self.paperRollerBase.setHpr(0, -20, 0)
-
-        bb = self.rollerNP.getTightBounds()
-        rad = abs(bb[0].y - bb[1].y) / 2
-        center = Vec3((bb[0].x+bb[1].x)/2, (bb[0].y+bb[1].y)/2-rad*0.3, (bb[0].z+bb[1].z)/2)
-        self.paperRollerBase.setPos(center)
 
     def setupTexture(self):
         """
@@ -166,37 +169,119 @@ class Typist(object):
 
     def start(self):
         self.target = None
-        self.loadTarget('paper')
+        self.setTarget('paper')
 
         self.hookKeyboard()
 
-    def loadTarget(self, name):
+
+    def createRollerBase(self):
+        """ The paper moves such that it is tangent to the roller.
+
+        This nodepath keeps a coordinate space relative to that, so that
+        the paper can be positioned from (0,0,0) to (0,0,1) to "roll" it
+        along the roller.
+        """
+        bb = self.rollerNP.getTightBounds()
+
+        #self.rollerNP.showTightBounds()
+        self.paperRollerBase = self.rollerAssemblyNP.attachNewNode('rollerBase')
+        self.paperRollerBase.setHpr(0, -20, 0)
+
+        print "roller:",bb
+        rad = abs(bb[0].y - bb[1].y) / 2
+        center = Vec3(-(bb[0].x+bb[1].x)/2 - 0.03,
+                      (bb[0].y-bb[1].y)/2,
+                      (bb[0].z+bb[1].z)/2)
+        self.paperRollerBase.setPos(center)
+
+    def setTarget(self, name):
         if self.target:
             self.target.removeNode()
 
         # load and transform the model
         target = self.TARGETS[name]
         self.target = self.base.loader.loadModel(target['model'])
-        self.target.setScale(target['scale'])
+        #self.target.setScale(target['scale'])
         self.target.setHpr(target['hpr'])
 
         # put it in the world
         self.target.reparentTo(self.paperRollerBase)
 
-        # apply the texture
-        root = self.target
-        if 'textureRoot' in target:
-            root = self.target.find("**/" + target['textureRoot'])
-            assert root
+        rbb = self.rollerNP.getTightBounds()
+        tbb = self.target.getTightBounds()
 
-        root.setTexture(self.typingStage, self.tex)
+        rs = (rbb[1] - rbb[0])
+        ts = (tbb[1] - tbb[0])
+
+        self.target.setScale(rs.x / ts.x, 1, 1)
+
+        # apply the texture
+        self.targetRoot = self.target
+        if 'textureRoot' in target:
+            self.targetRoot = self.target.find("**/" + target['textureRoot'])
+            assert self.targetRoot
+
+        self.targetRoot.setTexture(self.typingStage, self.tex)
+
+        #self.setupTargetClip()
 
         # reset
-        self.paperX = self.paperY = 0.0
-        newPos = self.calcPaperPos(0)
+        self.paperX = self.paperY = 0.75
+        newPos = self.calcPaperPos(self.paperY)
         self.target.setPos(newPos)
 
         self.moveCarriage()
+
+    def setupTargetClip(self):
+        """
+        The target is fed in to the typewriter but until we invent "geom curling",
+        it shouldn't be visible under the typewriter under the desk.
+
+        The @underDeskClip node has a world-relative bounding box, which
+        we can convert to the target-relative bounding box, and pass to a
+        shader that can clip the nodes.
+
+        """
+        shader = Shader.make(
+                Shader.SLGLSL,
+            """
+#version 120
+
+attribute vec4 p3d_MultiTexCoord0;
+attribute vec4 p3d_MultiTexCoord1;
+
+void main() {
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    gl_TexCoord[0] = p3d_MultiTexCoord0;
+    gl_TexCoord[1] = p3d_MultiTexCoord1;
+}
+
+            """,
+
+                """
+#version 120
+
+uniform sampler2D baseTex;
+uniform sampler2D charTex;
+const vec4 zero = vec4(0, 0, 0, 0);
+const vec4 one = vec4(1, 1, 1, 1);
+const vec4 half = vec4(0.5, 0.5, 0.5, 0);
+
+void main() {
+    vec4 baseColor = texture2D(baseTex, gl_TexCoord[0].st);
+    vec4 typeColor = texture2D(charTex, gl_TexCoord[1].st);
+    gl_FragColor = baseColor * typeColor;
+
+}"""
+        )
+
+        self.target.setShader(shader)
+
+        baseTex = self.targetRoot.getTexture()
+        print "Base Texture:",baseTex
+        self.target.setShaderInput("baseTex", baseTex)
+
+        self.target.setShaderInput("charTex", self.tex)
 
     def hookKeyboard(self):
         """
@@ -206,9 +291,9 @@ class Typist(object):
         self.base.accept('keystroke', self.schedTypeCharacter)
         self.base.accept('backspace', self.schedBackspace)
 
-        self.base.accept('arrow_up', lambda: self.schedAdjustPaper(-1))
+        self.base.accept('arrow_up', lambda: self.schedAdjustPaper(-5))
         self.base.accept('arrow_up-repeat', lambda: self.schedAdjustPaper(-1))
-        self.base.accept('arrow_down', lambda:self.schedAdjustPaper(1))
+        self.base.accept('arrow_down', lambda:self.schedAdjustPaper(5))
         self.base.accept('arrow_down-repeat', lambda:self.schedAdjustPaper(1))
 
         self.base.accept('arrow_left', lambda: self.schedAdjustCarriage(-1))
@@ -273,7 +358,7 @@ class Typist(object):
         :param paperX: 0...1
         :return: pos for self.carriageNP
         """
-        x = (0.5 - paperX) * 0.5 - 0.15
+        x = (0.5 - paperX) * 0.69 * 0.8 + 0.01
 
         bb = self.carriageBounds
         return self.baseCarriagePos + Point3(x * (bb[1].x-bb[0].x), 0, 0)
@@ -304,7 +389,7 @@ class Typist(object):
 
         bb = self.target.getTightBounds()
 
-        return Point3(0, 0, z * (bb[1].z-bb[0].z))
+        return Point3(-0.5, 0, z * (bb[1].z-bb[0].z))
 
     def createMovePaperInterval(self, newY):
         here = self.calcPaperPos(self.paperY)
@@ -333,7 +418,7 @@ class Typist(object):
 
     def schedRollPaper(self, by):
         """
-        Position the paper such that @percent of it is rolled over self.rollerNP.
+        Position the paper such that @percent of it is rolled over roller
         :param percent:
         :return:
         """

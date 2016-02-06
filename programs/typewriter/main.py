@@ -11,6 +11,9 @@ from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.ShowBase import ShowBase
 from world import World
 
+loadPrcFileData("", "gl-debug #t ")
+loadPrcFileData("", "gl-check-errors #t ")
+
 loadPrcFileData('', 'model-path $MAIN_DIR/assets/models')
 loadPrcFileData('', 'model-path $MAIN_DIR/assets/textures')
 loadPrcFileData('', 'model-path $MAIN_DIR/assets/fonts')

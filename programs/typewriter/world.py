@@ -4,8 +4,8 @@ Allow simulating a typewriter using texture projection
 Ed Swartz, Feb 2016
 '''
 
-from panda3d.core import DirectionalLight, AmbientLight, PointLight
-from panda3d.core import Point3, Mat4, TransparencyAttrib  # @UnusedImport
+from panda3d.core import DirectionalLight, AmbientLight, PointLight, ScissorEffect, ColorWriteAttrib, CullBinManager
+from panda3d.core import Point3, Mat4, TransparencyAttrib # @UnusedImport
 
 from direct.interval.LerpInterval import LerpHprInterval, LerpPosInterval, LerpFunc
 from direct.interval.MetaInterval import Parallel, Sequence
@@ -99,6 +99,29 @@ class World(object):
         self.deskNP.setScale(7.5)
         self.deskNP.setPos(0, -5, -6.5)
 
+        # make a box that clips content under the desk (e.g. the paper)
+        bb = self.deskNP.getTightBounds()
+        sz = (bb[1]-bb[0]) * 0.8
+
+        self.underDeskClip = self.base.loader.loadModel('box')
+        self.underDeskClip.setScale(sz)
+        self.underDeskClip.reparentTo(self.base.render)
+        self.underDeskClip.setPos(-sz.x/2, -sz.y*1.1, -sz.z*0.73)
+
+        if False:
+            # --> nope, this actually hides everything the camera might see
+
+            self.newBin = CullBinManager.getGlobalPtr().addBin('foo', CullBinManager.BT_state_sorted, -50)
+            # make the box obscure geometry "inside" it
+            self.underDeskClip.setAttrib(ColorWriteAttrib.make(False))
+            self.underDeskClip.setDepthWrite(True)
+            self.underDeskClip.setBin('foo', -50)
+
+        else:
+            bb = self.underDeskClip.getTightBounds()
+            self.underDeskClip.removeNode()
+
+
         self.typewriterNP.reparentTo(self.base.render)
 
         self.typewriterNP.setHpr(0, 0, 0)
@@ -163,7 +186,7 @@ class World(object):
         self.base.mouseInterfaceNode.setMat(mat)
         self.base.enableMouse()
 
-        self.typist = Typist(self.base, self.typewriterNP, self.sounds)
+        self.typist = Typist(self.base, self.typewriterNP, self.underDeskClip, self.sounds)
         self.typist.start()
 
     def placeItems(self):
