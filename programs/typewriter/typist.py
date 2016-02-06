@@ -226,7 +226,7 @@ class Typist(object):
         #self.setupTargetClip()
 
         # reset
-        self.paperX = self.paperY = 0.75
+        self.paperX = self.paperY = 0.
         newPos = self.calcPaperPos(self.paperY)
         self.target.setPos(newPos)
 
