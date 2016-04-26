@@ -4,6 +4,7 @@ Allow simulating a typewriter using texture projection
 Ed Swartz, Feb 2016
 '''
 import sys
+sys.path.insert(0, "../../lib")
 
 USE_RP = True
 
@@ -12,6 +13,7 @@ from panda3d.core import loadPrcFileData, Vec4, TextNode  # @UnusedImport
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.ShowBase import ShowBase
 from world import World
+
 
 # loadPrcFileData("", "gl-debug #t ")
 # loadPrcFileData("", "gl-check-errors #t ")
