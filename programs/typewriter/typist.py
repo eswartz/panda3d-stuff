@@ -93,8 +93,8 @@ class Typist(object):
         """
         self.texImage = PNMImage(1024, 1024)
         self.texImage.addAlpha()
-        self.texImage.fillVal(255)
-        self.texImage.alphaFillVal(0)
+        self.texImage.fill(1.0)
+        self.texImage.alphaFill(1.0)
 
         self.tex = Texture('typing')
         self.tex.setMagfilter(Texture.FTLinear)
