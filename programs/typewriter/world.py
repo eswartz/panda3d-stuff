@@ -4,7 +4,7 @@ Allow simulating a typewriter using texture projection
 Ed Swartz, Feb 2016
 '''
 
-from panda3d.core import DirectionalLight, AmbientLight, PointLight, ScissorEffect, ColorWriteAttrib, CullBinManager
+from panda3d.core import ScissorEffect, ColorWriteAttrib, CullBinManager, AmbientLight, DirectionalLight, PointLight
 from panda3d.core import Point3, Mat4, TransparencyAttrib # @UnusedImport
 
 from direct.interval.LerpInterval import LerpHprInterval, LerpPosInterval, LerpFunc
@@ -17,29 +17,30 @@ global globalClock
 
 class World(object):
 
-    def __init__(self, base):
+    def __init__(self, base, USE_RP):
         self.base = base
         """ direct.showbase.ShowBase """
 
-        alight = AmbientLight('alight')
-        alnp = self.base.render.attachNewNode(alight)
-        alight.setColor((0.2, 0.2, 0.2, 1))
-        self.base.render.setLight(alnp)
+        if not USE_RP:
+            alight = AmbientLight('alight')
+            alnp = self.base.render.attachNewNode(alight)
+            alight.setColor((0.2, 0.2, 0.2, 1))
+            self.base.render.setLight(alnp)
 
-        # Put lighting on the main scene
+            # Put lighting on the main scene
 
-        dlight = DirectionalLight('dlight')
-        dlnp = self.base.render.attachNewNode(dlight)
-        dlnp.setPos(0, 5, 5)
-        dlight.setColor((0.8, 0.8, 0.5, 1))
-        dlnp.setHpr(0, 60, 0)
-        self.base.render.setLight(dlnp)
+            dlight = DirectionalLight('dlight')
+            dlnp = self.base.render.attachNewNode(dlight)
+            dlnp.setPos(0, 5, 5)
+            dlight.setColor((0.8, 0.8, 0.5, 1))
+            dlnp.setHpr(0, 60, 0)
+            self.base.render.setLight(dlnp)
 
-        plight = PointLight('plight')
-        plnp = self.base.render.attachNewNode(plight)
-        plnp.setPos(0, -50, 50)
-        plnp.setHpr(0, 60, 0)
-        self.base.render.setLight(plnp)
+            plight = PointLight('plight')
+            plnp = self.base.render.attachNewNode(plight)
+            plnp.setPos(0, -50, 50)
+            plnp.setHpr(0, 60, 0)
+            self.base.render.setLight(plnp)
 
         self.sounds = {}
 
@@ -73,6 +74,8 @@ class World(object):
         self.sounds['type1'] = self.base.loader.loadSfx('type1.wav')
         self.sounds['type2'] = self.base.loader.loadSfx('type2.wav')
         self.sounds['type3'] = self.base.loader.loadSfx('type3.wav')
+
+        self.base.sfxManagerList[0].setVolume(0.5)
 
         if not self.skipIntro:
             self.sky.setAttrib(TransparencyAttrib.make(TransparencyAttrib.M_alpha))
